@@ -43,6 +43,34 @@
   line-height: 1.2;
 }
 
+.top-tabs {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.top-tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: #000;
+  cursor: pointer;
+  min-height: 34px;
+  padding: 4px 10px;
+  text-transform: lowercase;
+}
+
+.top-tabs button:hover,
+.top-tabs button:focus-visible {
+  border-color: #000;
+  outline: none;
+}
+
+.top-tabs button.active {
+  font-weight: 700;
+}
+
 .refresh-button {
   background: #1f5b68;
   border: 1px solid #16434d;
@@ -272,6 +300,217 @@ pre {
   margin: 12px 0;
 }
 
+.placeholder-panel {
+  padding: 28px 26px;
+}
+
+.placeholder-panel h2 {
+  color: #172033;
+  font-size: 18px;
+  margin: 0;
+}
+
+.rag-browser {
+  display: grid;
+  height: calc(100vh - 88px);
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  overflow: hidden;
+}
+
+.rag-column {
+  background: rgba(253, 251, 247, 0.92);
+  border-right: 1px solid #d8d1c4;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.rag-list {
+  display: grid;
+  gap: 8px;
+}
+
+.back-button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #000;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 30px;
+  padding: 3px 8px;
+}
+
+.back-button:hover,
+.back-button:focus-visible {
+  border-color: #000;
+  outline: none;
+}
+
+.rail-context {
+  border-bottom: 1px solid #d8d1c4;
+  margin: -4px 0 14px;
+  padding-bottom: 12px;
+}
+
+.rail-context h2 {
+  color: #172033;
+  font-size: 18px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rail-context p {
+  color: #6f6b63;
+  margin: 3px 0 0;
+}
+
+.rag-row {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #172033;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  padding: 10px;
+  text-align: left;
+}
+
+.rag-row:hover,
+.rag-row:focus-visible,
+.rag-row.active {
+  border-color: #000;
+  outline: none;
+}
+
+.rag-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rag-row small {
+  color: #6f6b63;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rag-main-page {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 22px 32px 36px;
+}
+
+.attribute-panel h3,
+.instance-panel h3 {
+  color: #172033;
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.attribute-panel,
+.instance-panel {
+  margin-top: 22px;
+}
+
+.pane-header {
+  border-bottom: 1px solid #d8d1c4;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
+.pane-header h2 {
+  color: #172033;
+  font-size: 24px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pane-header p:last-child {
+  color: #6f6b63;
+  margin: 8px 0 0;
+}
+
+.attribute-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.attribute-row {
+  background: rgba(255, 250, 240, 0.95);
+  border: 1px solid #d8d1c4;
+  border-radius: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.attribute-row strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.attribute-row span {
+  color: #7b4f2b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.attribute-row p {
+  color: #6f6b63;
+  margin: 8px 0 0;
+}
+
+.instance-list {
+  display: grid;
+  gap: 10px;
+}
+
+.instance-card {
+  background: rgba(255, 250, 240, 0.95);
+  border: 1px solid #d8d1c4;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.json-block {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.json-line {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(110px, 0.34fr) minmax(0, 1fr);
+  min-width: 0;
+}
+
+.json-key {
+  color: #7b4f2b;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.json-value,
+.json-null {
+  color: #172033;
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.json-null {
+  color: #8d7a62;
+}
+
 @media (max-width: 920px) {
   .topbar,
   .detail-header {
@@ -280,13 +519,26 @@ pre {
   }
 
   .monitor-grid,
+  .rag-browser,
   .inspection-grid,
   .metadata-grid {
     grid-template-columns: 1fr;
   }
 
-  .session-rail {
+  .session-rail,
+  .rag-column,
+  .attribute-panel {
     border-bottom: 1px solid #d8d1c4;
     border-right: 0;
+  }
+
+  .rag-browser {
+    height: auto;
+    overflow: visible;
+  }
+
+  .rag-column,
+  .rag-main-page {
+    overflow-y: visible;
   }
 }

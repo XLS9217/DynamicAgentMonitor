@@ -35,6 +35,40 @@ export interface SessionDetailResponse {
   rag: RagCache | null
 }
 
+export interface BucketSummary {
+  name: string
+  description: string
+}
+
+export interface BlueprintSummary {
+  id: string
+  name: string
+  description: string
+  attributes: Record<
+    string,
+    {
+      description: string
+      is_identifier: boolean
+    }
+  >
+}
+
+export interface BucketsResponse {
+  status: string
+  buckets: BucketSummary[]
+}
+
+export interface BlueprintsResponse {
+  status: string
+  blueprints: BlueprintSummary[]
+}
+
+export interface BlueprintInstancesResponse {
+  status: string
+  blueprint_id: string
+  instances: Record<string, unknown>[]
+}
+
 export async function getSessions(): Promise<SessionSummary[]> {
   const response = await request.get<SessionsResponse>('/monitor/sessions')
   return response.data.sessions
@@ -43,4 +77,25 @@ export async function getSessions(): Promise<SessionSummary[]> {
 export async function getSession(sessionId: string): Promise<SessionDetailResponse> {
   const response = await request.get<SessionDetailResponse>(`/monitor/sessions/${sessionId}`)
   return response.data
+}
+
+export async function getBuckets(): Promise<BucketSummary[]> {
+  const response = await request.get<BucketsResponse>('/buckets')
+  return response.data.buckets
+}
+
+export async function getBucketBlueprints(bucketName: string): Promise<BlueprintSummary[]> {
+  const response = await request.get<BlueprintsResponse>(
+    `/buckets/${encodeURIComponent(bucketName)}/blueprints`,
+  )
+  return response.data.blueprints
+}
+
+export async function getBlueprintInstances(
+  blueprintId: string,
+): Promise<Record<string, unknown>[]> {
+  const response = await request.get<BlueprintInstancesResponse>(
+    `/blueprints/${encodeURIComponent(blueprintId)}/instances`,
+  )
+  return response.data.instances
 }

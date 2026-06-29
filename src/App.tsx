@@ -1,8 +1,13 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+﻿/* eslint-disable react-hooks/set-state-in-effect */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  getBlueprintInstances,
+  getBucketBlueprints,
+  getBuckets,
   getSession,
   getSessions,
+  type BlueprintSummary,
+  type BucketSummary,
   type SessionDetailResponse,
   type SessionSummary,
 } from './api/gateway'
@@ -42,12 +47,55 @@ function getMonitorEventsUrl() {
   return `${API_BASE_URL.replace(/^http/, 'ws')}/monitor/events`
 }
 
+function JsonValue({ value, depth = 0 }: { value: unknown; depth?: number }) {
+  if (value === null || value === undefined) {
+    return <span className="json-null">null</span>
+  }
+
+  if (Array.isArray(value)) {
+    return (
+      <div className="json-block" style={{ paddingLeft: depth ? 14 : 0 }}>
+        {value.map((item, index) => (
+          <div className="json-line" key={index}>
+            <span className="json-key">{index}</span>
+            <JsonValue value={item} depth={depth + 1} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (typeof value === 'object') {
+    return (
+      <div className="json-block" style={{ paddingLeft: depth ? 14 : 0 }}>
+        {Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => (
+          <div className="json-line" key={key}>
+            <span className="json-key">{key}</span>
+            <JsonValue value={nestedValue} depth={depth + 1} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return <span className="json-value">{String(value)}</span>
+}
+
 function App() {
+  const [activeTab, setActiveTab] = useState<'sessions' | 'rag-buckets' | 'logs'>('sessions')
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<SessionDetailResponse | null>(null)
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [buckets, setBuckets] = useState<BucketSummary[]>([])
+  const [blueprints, setBlueprints] = useState<BlueprintSummary[]>([])
+  const [instances, setInstances] = useState<Record<string, unknown>[]>([])
+  const [selectedBucket, setSelectedBucket] = useState<string | null>(null)
+  const [selectedBlueprint, setSelectedBlueprint] = useState<string | null>(null)
+  const [loadingBuckets, setLoadingBuckets] = useState(false)
+  const [loadingBlueprints, setLoadingBlueprints] = useState(false)
+  const [loadingInstances, setLoadingInstances] = useState(false)
   const [realtimeState, setRealtimeState] = useState<'connecting' | 'connected' | 'disconnected'>(
     'connecting',
   )
@@ -56,6 +104,11 @@ function App() {
   const selectedSession = useMemo(
     () => sessions.find((session) => session.session_id === selectedId) ?? null,
     [selectedId, sessions],
+  )
+
+  const activeBlueprint = useMemo(
+    () => blueprints.find((blueprint) => blueprint.id === selectedBlueprint) ?? null,
+    [blueprints, selectedBlueprint],
   )
 
   const refreshSessions = useCallback(async (preferredId: string | null = null) => {
@@ -96,6 +149,73 @@ function App() {
     }
   }, [])
 
+  const refreshBuckets = useCallback(async (preferredBucket: string | null = selectedBucket) => {
+    setLoadingBuckets(true)
+    setError(null)
+
+    try {
+      const nextBuckets = await getBuckets()
+      const nextBucket = nextBuckets.some((bucket) => bucket.name === preferredBucket)
+        ? preferredBucket
+        : null
+
+      setBuckets(nextBuckets)
+      setSelectedBucket(nextBucket)
+
+      if (!nextBucket) {
+        setBlueprints([])
+        setInstances([])
+        setSelectedBlueprint(null)
+      }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setLoadingBuckets(false)
+    }
+  }, [selectedBucket])
+
+  const refreshBlueprints = useCallback(
+    async (bucketName: string, preferredBlueprint: string | null = selectedBlueprint) => {
+      setLoadingBlueprints(true)
+      setError(null)
+
+      try {
+        const nextBlueprints = await getBucketBlueprints(bucketName)
+        const nextBlueprint = nextBlueprints.some(
+          (blueprint) => blueprint.id === preferredBlueprint,
+        )
+          ? preferredBlueprint
+          : null
+
+        setBlueprints(nextBlueprints)
+        setSelectedBlueprint(nextBlueprint)
+
+        if (!nextBlueprint) {
+          setInstances([])
+        }
+      } catch (requestError) {
+        setError(getErrorMessage(requestError))
+      } finally {
+        setLoadingBlueprints(false)
+      }
+    },
+    [selectedBlueprint],
+  )
+
+  const refreshInstances = useCallback(async (blueprintId: string) => {
+    setLoadingInstances(true)
+    setError(null)
+
+    try {
+      setInstances(await getBlueprintInstances(blueprintId))
+    } catch (requestError) {
+      setInstances([])
+      setError(getErrorMessage(requestError))
+    } finally {
+      setLoadingInstances(false)
+    }
+  }, [])
+
   useEffect(() => {
     refreshSessions(null)
   }, [refreshSessions])
@@ -105,6 +225,24 @@ function App() {
       refreshDetail(selectedId)
     }
   }, [refreshDetail, selectedId])
+
+  useEffect(() => {
+    if (activeTab === 'rag-buckets' && buckets.length === 0 && !loadingBuckets) {
+      refreshBuckets(null)
+    }
+  }, [activeTab, buckets.length, loadingBuckets, refreshBuckets])
+
+  useEffect(() => {
+    if (activeTab === 'rag-buckets' && selectedBucket) {
+      refreshBlueprints(selectedBucket)
+    }
+  }, [activeTab, refreshBlueprints, selectedBucket])
+
+  useEffect(() => {
+    if (activeTab === 'rag-buckets' && selectedBlueprint) {
+      refreshInstances(selectedBlueprint)
+    }
+  }, [activeTab, refreshInstances, selectedBlueprint])
 
   useEffect(() => {
     const socket = new WebSocket(getMonitorEventsUrl())
@@ -130,24 +268,37 @@ function App() {
     <main className="monitor-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">
-            Local monitor API · {API_BASE_URL} · realtime {realtimeState}
-          </p>
-          <h1>Dynamic Agent Session Monitor</h1>
+          <p className="eyebrow">monitor api: {API_BASE_URL} · realtime {realtimeState}</p>
+          <h1>Dynamic Agent Monitor</h1>
         </div>
-        <button
-          className="refresh-button"
-          disabled={loadingSessions}
-          onClick={() => refreshSessions(selectedId)}
-          type="button"
-        >
-          Refresh
-        </button>
+        <nav className="top-tabs" aria-label="Monitor sections">
+          <button
+            className={activeTab === 'sessions' ? 'active' : ''}
+            onClick={() => setActiveTab('sessions')}
+            type="button"
+          >
+            sessions
+          </button>
+          <button
+            className={activeTab === 'rag-buckets' ? 'active' : ''}
+            onClick={() => setActiveTab('rag-buckets')}
+            type="button"
+          >
+            rag buckets
+          </button>
+          <button
+            className={activeTab === 'logs' ? 'active' : ''}
+            onClick={() => setActiveTab('logs')}
+            type="button"
+          >
+            logs
+          </button>
+        </nav>
       </header>
 
       {error && <div className="error-banner">{error}</div>}
 
-      <section className="monitor-grid">
+      {activeTab === 'sessions' && <section className="monitor-grid">
         <aside className="session-rail" aria-label="Session list">
           <div className="rail-header">
             <h2>Sessions</h2>
@@ -257,7 +408,138 @@ function App() {
             </>
           )}
         </section>
-      </section>
+      </section>}
+
+      {activeTab === 'rag-buckets' && (
+        <section className="rag-browser">
+          <aside className="rag-column" aria-label="RAG buckets">
+            <div className="rail-header">
+              {selectedBucket ? (
+                <button
+                  className="back-button"
+                  onClick={() => {
+                    setSelectedBucket(null)
+                    setSelectedBlueprint(null)
+                    setBlueprints([])
+                    setInstances([])
+                  }}
+                  type="button"
+                >
+                  Back
+                </button>
+              ) : (
+                <h2>Buckets</h2>
+              )}
+              <span>{selectedBucket ? blueprints.length : buckets.length}</span>
+            </div>
+
+            {selectedBucket && (
+              <div className="rail-context">
+                <p>bucket</p>
+                <h2>{selectedBucket}</h2>
+                <p>Blueprints</p>
+              </div>
+            )}
+
+            {!selectedBucket && loadingBuckets && <p className="empty-state">Loading buckets...</p>}
+            {!selectedBucket && !loadingBuckets && buckets.length === 0 && (
+              <p className="empty-state">No buckets found.</p>
+            )}
+
+            {selectedBucket && loadingBlueprints && (
+              <p className="empty-state">Loading blueprints...</p>
+            )}
+            {selectedBucket && !loadingBlueprints && blueprints.length === 0 && (
+              <p className="empty-state">No blueprints found.</p>
+            )}
+
+            <div className="rag-list">
+              {!selectedBucket &&
+                buckets.map((bucket) => (
+                  <button
+                    className="rag-row"
+                    key={bucket.name}
+                    onClick={() => {
+                      setSelectedBucket(bucket.name)
+                      setSelectedBlueprint(null)
+                      setInstances([])
+                    }}
+                    type="button"
+                  >
+                    <strong>{bucket.name}</strong>
+                    <small>{bucket.description || 'No description'}</small>
+                  </button>
+                ))}
+
+              {selectedBucket &&
+                blueprints.map((blueprint) => (
+                  <button
+                    className={`rag-row ${selectedBlueprint === blueprint.id ? 'active' : ''}`}
+                    key={blueprint.id}
+                    onClick={() => setSelectedBlueprint(blueprint.id)}
+                    type="button"
+                  >
+                    <strong>{blueprint.name}</strong>
+                    <small>{blueprint.description || blueprint.id}</small>
+                  </button>
+                ))}
+            </div>
+          </aside>
+
+          <section className="rag-main-page">
+            {!activeBlueprint && (
+              <div className="blank-panel">
+                <h2>No blueprint selected</h2>
+                <p>Select a bucket, then click a blueprint to inspect its structure and instances.</p>
+              </div>
+            )}
+
+            {activeBlueprint && (
+              <>
+                <div className="pane-header">
+                  <p className="eyebrow">bucket: {selectedBucket}</p>
+                  <h2>{activeBlueprint.name}</h2>
+                  <p>{activeBlueprint.description || activeBlueprint.id}</p>
+                </div>
+
+                <section className="attribute-panel">
+                  <h3>Blueprint Structure</h3>
+                  <div className="attribute-list">
+                    {Object.entries(activeBlueprint.attributes).map(([name, attribute]) => (
+                      <div className="attribute-row" key={name}>
+                        <strong>{name}</strong>
+                        <span>{attribute.is_identifier ? 'identifier' : 'attribute'}</span>
+                        <p>{attribute.description || 'No description'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="instance-panel">
+                  <h3>Instances</h3>
+                  {loadingInstances && <p className="empty-state">Loading instances...</p>}
+                  {!loadingInstances && instances.length === 0 && (
+                    <p className="empty-state">No instances found.</p>
+                  )}
+                  <div className="instance-list">
+                    {instances.map((instance, index) => (
+                      <article className="instance-card" key={String(instance.instance_id ?? index)}>
+                        <JsonValue value={instance} />
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+          </section>
+        </section>
+      )}
+
+      {activeTab === 'logs' && (
+        <section className="placeholder-panel">
+          <h2>Logs</h2>
+        </section>
+      )}
     </main>
   )
 }
